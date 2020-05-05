@@ -1,0 +1,1 @@
+from static_voice_converter import app as application
