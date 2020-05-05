@@ -22,7 +22,7 @@ def get_ogg_voice():
                            as_attachment=True)
 
 
-@app.route("/update_voice_lines")
+@app.route("/update_voice_lines" )
 def update_voice_lines():
     if len(grab_voice_lines()) > 0:
         return "ok"
