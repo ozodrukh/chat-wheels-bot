@@ -30,4 +30,4 @@ def update_voice_lines():
         return "failed"
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', port=80)
