@@ -1,5 +1,7 @@
-import sys, os
+import os
+
 import requests
+
 
 def generate_ogg_from_source(url: str, filename: str):
     r = requests.get(url, stream=True)

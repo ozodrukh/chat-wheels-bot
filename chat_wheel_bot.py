@@ -8,12 +8,15 @@ This program is dedicated to the public domain under the CC0 license.
 import json
 import logging
 import os
+from urllib import parse
 
 import telegram
+import requests
 from fuzzywuzzy import process
 from telegram.ext import CommandHandler, CallbackQueryHandler, Updater, MessageHandler, Filters, InlineQueryHandler
 
 import voice_generator
+from chat_wheel import Voice
 
 dota2_wheel_file = open("voicelines/dota2_chat_wheels.json", "r")
 voice_lines: dict = json.loads("".join(dota2_wheel_file.readlines()))
@@ -22,23 +25,31 @@ voice_line_names = list(voice_lines.keys())
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+endpoint = "https://chat-wheels-bot.herokuapp.com/"
+
+
+def search_voice_lines(query) -> [Voice]:
+    r = requests.get("{endpoint}/search?query={query}".format_map({
+        'endpoint': endpoint,
+        'query': query
+    }))
+    return list(map(lambda item: Voice(item), r.json))
 
 def fuzzy_search_by_name(update: telegram.Update, context):
     if update.message:  # your bot can receive updates without messages
         # Reply to the message
         message: telegram.Message = update.message
 
-        best_results = process.extractBests(message.text, voice_line_names, score_cutoff=50)
+        best_results = search_voice_lines(message.text)
 
         if len(best_results) is 0:
             message.reply_text("Nothing found 🌻")
             return
 
         keyboard_items = []
-        for (title, match) in best_results:
+        for voice in best_results:
             keyboard_items.append([
-                telegram.InlineKeyboardButton(title,
-                                              callback_data=voice_line_names.index(title))
+                telegram.InlineKeyboardButton(voice.name, callback_data=voice.id)
             ])
 
         message.reply_text("Select one of found 🌻:", reply_markup=telegram.InlineKeyboardMarkup(keyboard_items))
@@ -46,6 +57,7 @@ def fuzzy_search_by_name(update: telegram.Update, context):
 
 def start(update: telegram.Update, context):
     update.message.reply_text("Now just send my voice line name u would like to find 🌻")
+
 
 def error(update, context):
     """Log Errors caused by Updates."""
@@ -55,15 +67,14 @@ def error(update, context):
 def quick_search(update: telegram.Update, context):
     query = update.inline_query.query
 
-    print(query)
-
-    best_results = process.extractBests(query, voice_line_names, score_cutoff=50)
+    best_results = search_voice_lines(query)
     results = []
 
-    for (title, match) in best_results:
-        results.append(telegram.InlineQueryResultVoice(voice_line_names.index(title), voice_lines[title], title))
+    for id, voice in enumerate(best_results):
+        results.append(telegram.InlineQueryResultVoice(id, voice.url, voice.name, caption=voice.name))
 
     update.inline_query.answer(results)
+
 
 def send_voice_line(update: telegram.Update, context):
     voice_line_id = int(update.callback_query.data)
@@ -71,7 +82,6 @@ def send_voice_line(update: telegram.Update, context):
     voice_line_url = voice_lines[voice_line_name]
 
     update.callback_query.answer()
-    print(voice_line_id)
 
     file = voice_generator.make_ogg_file_path(voice_line_name,
                                               os.path.join(os.getcwd(), "voicelines", "files"))
@@ -101,6 +111,7 @@ def main():
     # Run the bot until the user presses Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT
     updater.idle()
+
 
 if __name__ == '__main__':
     main()

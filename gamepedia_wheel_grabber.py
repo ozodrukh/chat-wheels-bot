@@ -2,9 +2,13 @@ import bs4
 import requests
 import json
 
+from chat_wheel import Voice, ChatWheelStorage, VoiceEncoder
 
-def grab_voice_lines():
-    voice_lines = {}
+
+def grab_voice_lines(storage: ChatWheelStorage):
+    storage.clear()
+
+    voice_lines = []
 
     response = requests.get("https://dota2.gamepedia.com/Chat_Wheel")
     parser = bs4.BeautifulSoup(response.content, "html.parser")
@@ -14,13 +18,17 @@ def grab_voice_lines():
         audio_block = audio.parent.parent
         audio_name = audio_block.contents[-1]
 
-        # print(get_name(audio_name))
-        voice_lines[get_name(audio_name)] = audio.select_one("source")["src"]
+        voice = Voice()
+        voice.name = get_name(audio_name)
+        voice.url = audio.select_one("source")["src"]
 
-    # print(voice_lines)
+        storage.save_voice_object(voice)
+        voice_lines.append(voice)
+
+    print(json.dumps(storage.search("lakad"), cls=VoiceEncoder))
 
     chatwheels_json = open("voicelines/dota2_chat_wheels.json", "w+")
-    chatwheels_json.write(json.dumps(voice_lines))
+    chatwheels_json.write(json.dumps(voice_lines, cls=VoiceEncoder))
     return voice_lines
 
 
