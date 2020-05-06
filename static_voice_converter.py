@@ -9,6 +9,10 @@ from flask import request
 app = flask.Flask(__name__)
 storage = ChatWheelStorage()
 
+if not os.path.exists("voicelines"):
+    os.mkdir("voicelines")
+    os.mkdir("voicelines/files")
+
 
 @app.route("/get_wheel_voice_line")
 def get_ogg_voice():
