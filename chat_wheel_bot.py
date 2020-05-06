@@ -18,22 +18,27 @@ from telegram.ext import CommandHandler, CallbackQueryHandler, Updater, MessageH
 import voice_generator
 from chat_wheel import Voice
 
-dota2_wheel_file = open("voicelines/dota2_chat_wheels.json", "r")
-voice_lines: dict = json.loads("".join(dota2_wheel_file.readlines()))
-voice_line_names = list(voice_lines.keys())
-
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-endpoint = "https://chat-wheels-bot.herokuapp.com/"
+endpoint = "https://chat-wheels-bot.herokuapp.com"
 
+def get_voice_link(id:str) -> str:
+    return "{endpoint}/get_wheel_voice_line?id={id}".format_map({
+        'endpoint': endpoint,
+        'id': id
+    })
 
 def search_voice_lines(query) -> [Voice]:
-    r = requests.get("{endpoint}/search?query={query}".format_map({
-        'endpoint': endpoint,
-        'query': query
-    }))
-    return list(map(lambda item: Voice(item), r.json))
+    try:
+        r = requests.get("{endpoint}/search?query={query}".format_map({
+            'endpoint': endpoint,
+            'query': query
+        }))
+        return list(map(lambda item: Voice(item), r.json()))
+    except Exception as e:
+        print(e)
+        return []
 
 def fuzzy_search_by_name(update: telegram.Update, context):
     if update.message:  # your bot can receive updates without messages
@@ -68,6 +73,7 @@ def quick_search(update: telegram.Update, context):
     query = update.inline_query.query
 
     best_results = search_voice_lines(query)
+    print(query, best_results)
     results = []
 
     for id, voice in enumerate(best_results):
@@ -77,19 +83,13 @@ def quick_search(update: telegram.Update, context):
 
 
 def send_voice_line(update: telegram.Update, context):
-    voice_line_id = int(update.callback_query.data)
-    voice_line_name = voice_line_names[voice_line_id]
-    voice_line_url = voice_lines[voice_line_name]
+    voice_line_id = update.callback_query.data
+    voice_line_url = get_voice_link(voice_line_id)
+    print(voice_line_url)
 
     update.callback_query.answer()
 
-    file = voice_generator.make_ogg_file_path(voice_line_name,
-                                              os.path.join(os.getcwd(), "voicelines", "files"))
-
-    if not os.path.exists(file):
-        voice_generator.generate_ogg_from_source(voice_line_url, file)
-
-    update.callback_query.message.reply_voice(open(file, "rb"), caption=voice_line_name)
+    update.callback_query.message.reply_voice(voice_line_url, update.callback_query.message.text)
 
 
 def main():

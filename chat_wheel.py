@@ -111,7 +111,7 @@ class ChatWheelStorage(object):
         return self._voices.insert(voice_object._data)
 
     def get_voice_object(self, id=None) -> Optional[Voice]:
-        voice_line = self._voices.find_one(id=id)
+        voice_line = self._voices.find_one(uuid=id)
 
         if voice_line is not None:
             return Voice(voice_line)

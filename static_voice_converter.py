@@ -34,7 +34,8 @@ def get_ogg_voice():
 
 @app.route("/search")
 def search():
-    return flask.json.dumps(storage.search(request.args["query"]), cls=VoiceEncoder, allow_nan=False)
+    query  = request.args["query"] or ""
+    return flask.json.dumps(storage.search(query), cls=VoiceEncoder, allow_nan=False)
 
 
 @app.route("/update_voice_lines")
