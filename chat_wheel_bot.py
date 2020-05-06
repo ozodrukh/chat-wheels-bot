@@ -17,6 +17,7 @@ from telegram.ext import CommandHandler, CallbackQueryHandler, Updater, MessageH
 
 import voice_generator
 from chat_wheel import Voice
+from keys import bot_token
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -31,6 +32,9 @@ def get_voice_link(id:str) -> str:
 
 def search_voice_lines(query) -> [Voice]:
     try:
+        if " " not in query:
+            query += "*"
+
         r = requests.get("{endpoint}/search?query={query}".format_map({
             'endpoint': endpoint,
             'query': query
@@ -73,7 +77,6 @@ def quick_search(update: telegram.Update, context):
     query = update.inline_query.query
 
     best_results = search_voice_lines(query)
-    print(query, best_results)
     results = []
 
     for id, voice in enumerate(best_results):
@@ -85,7 +88,6 @@ def quick_search(update: telegram.Update, context):
 def send_voice_line(update: telegram.Update, context):
     voice_line_id = update.callback_query.data
     voice_line_url = get_voice_link(voice_line_id)
-    print(voice_line_url)
 
     update.callback_query.answer()
 
@@ -96,7 +98,7 @@ def main():
     # Create the Updater and pass it your bot's token.
     # Make sure to set use_context=True to use the new context based callbacks
     # Post version 12 this will no longer be necessary
-    updater = Updater("905206939:AAH_3CFuxuYfKiYGo-7U5toBQ65SrR9Ggqg", use_context=True)
+    updater = Updater(bot_token, use_context=True)
 
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, fuzzy_search_by_name))
